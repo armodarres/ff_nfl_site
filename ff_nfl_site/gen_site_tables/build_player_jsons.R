@@ -73,21 +73,48 @@ dir_create("public/headshots")
 
 message("Downloading headshots locally...")
 
-for (i in 1:nrow(merged)) {
-  pid <- merged$gsis_id[i]
-  url <- paste0(merged$headshot_url[i], ".png")
-  dest <- paste0("public/headshots/", pid, ".png")
-  
-  try({
-    GET(
-      url,
-      write_disk(dest, overwrite = TRUE),
-      timeout(10)
-    )
-  })
+# Ensure fallback exists
+fallback_src <- "public/headshots/missing.png"
+if (!file_exists(fallback_src)) {
+  file_copy("public/missing.png", fallback_src)
 }
 
-message("Local headshots complete 🟢")
+# Download each headshot safely
+for (i in 1:nrow(merged)) {
+  pid <- merged$gsis_id[i]
+  url <- merged$headshot_url[i]
+  
+  # Skip NA / blank URLs
+  if (is.na(url) || url == "") {
+    next
+  }
+  
+  # Build final URL
+  full_url <- paste0(url, ".png")
+  dest <- paste0("public/headshots/", pid, ".png")
+  
+  # Skip if file already exists
+  if (file_exists(dest)) next
+  
+  # Attempt download with retry
+  tryCatch(
+    {
+      GET(
+        full_url,
+        write_disk(dest, overwrite = TRUE),
+        timeout(20)
+      )
+    },
+    error = function(e) {
+      message("⚠️ Failed: ", pid)
+      # write fallback
+      file_copy(fallback_src, dest, overwrite = TRUE)
+    }
+  )
+}
+
+message("Headshot download complete 🟢")
+
 
 # -------------------------
 # Create final index table

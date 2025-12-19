@@ -1,9 +1,25 @@
-.Rproj.user
-.Rhistory
-.RData
-.httr-oauth
+# Node
+node_modules/
+.next/
+out/
+dist/
+
+# R
+*.Rhistory
+*.RData
+.Rproj.user/
+
+# Data
+data/
+public/data/
+public/headshots/
+public/logos/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# System
 .DS_Store
-.quarto
-data_raw/
-data_processed/
-outputs/
