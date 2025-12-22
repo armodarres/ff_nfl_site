@@ -20,7 +20,7 @@ player_season <- read_parquet(
   "data/data_processed/player_season_xfp.parquet"
 )
 
-# Ensure team_id exists — if not, placeholder
+# Ensure team_id exists — fallback
 if (!"team_id" %in% names(player_season)) {
   player_season$team_id <- NA_character_
 }
@@ -37,43 +37,52 @@ make_slug <- function(x) {
 }
 
 # -------------------------
-# Derive Index
+# Derive active season + team
 # -------------------------
 
-player_index <- player_season %>%
+max_season <- max(player_season$season, na.rm = TRUE)
+
+# get most recent team per player
+recent_team <- player_season %>%
+  arrange(season) %>%
+  group_by(gsis_id) %>%
+  slice_tail(n = 1) %>% 
+  ungroup() %>%
+  select(gsis_id, team_id)
+
+
+# core years + status
+player_years <- player_season %>%
   group_by(gsis_id, player_name, position) %>%
   summarise(
     first_season = min(season, na.rm = TRUE),
-    last_season = max(season, na.rm = TRUE),
+    last_season  = max(season, na.rm = TRUE),
     .groups = "drop"
   ) %>%
+  mutate(active = last_season == max_season)
+
+# -------------------------
+# Join + shape final index
+# -------------------------
+
+player_index <- player_years %>%
+  left_join(recent_team, by = "gsis_id") %>%
   mutate(
+    name = player_name,
     slug = make_slug(player_name),
-    active = last_season == max(last_season),
-    # Fetch most recent team_id if present
-    team_id = player_season %>%
-      filter(gsis_id == gsis_id) %>%
-      arrange(desc(season)) %>%
-      slice(1) %>%
-      pull(team_id),
-    # Simple logo rule (we fix later)
-    team_logo = ifelse(
-      active,
-      paste0("/logos/", team_id, ".png"),
-      "/logos/retired.png"
-    )
+    team = team_id
   ) %>%
   select(
     gsis_id,
-    name = player_name,
+    name,
     slug,
     position,
-    first_season,
-    last_season,
+    team,
     active,
-    team_id,
-    team_logo
-  )
+    first_season,
+    last_season
+  ) %>%
+  arrange(name)
 
 # -------------------------
 # Output Directory
@@ -91,5 +100,12 @@ write_json(
   auto_unbox = TRUE,
   pretty = TRUE
 )
+
+file_copy(
+  "data/site_data/player_index.json",
+  "public/data/site_data/player_index.json",
+  overwrite = TRUE
+)
+
 
 message("player_index.json written successfully 🚀")

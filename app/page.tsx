@@ -1,8 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import NavDropdown from "./components/NavDropdown";
 import SearchBar from "./components/SearchBar";
+import NavDropdown from "./components/NavDropdown";
+import TeamsDropdown from "./components/TeamsDropdown";
+import PlayersDropdown from "./components/PlayersDropdown";
+import CoachesDropdown from "./components/CoachesDropdown";
+
 
 export default function HomePage() {
   return (
@@ -24,30 +27,17 @@ export default function HomePage() {
 
       {/* NAV BAR */}
       <nav style={styles.nav}>
-        <NavDropdown 
-          label="Players"
-          items={[
-            { label: "QB", href: "/players/qb" },
-            { label: "RB", href: "/players/rb" },
-            { label: "WR", href: "/players/wr" },
-            { label: "TE", href: "/players/te" },
-          ]}
-        />
+        {/* PLAYERS - custom dropdown with Historical submenu */}
+        <PlayersDropdown />
 
-        <NavDropdown 
-          label="Teams"
-          items={[
-            { label: "All Teams", href: "/teams" },
-          ]}
-        />
+        {/* TEAMS - logo dropdown */}
+        <TeamsDropdown />
 
-        <NavDropdown 
-          label="Coaches"
-          items={[
-            { label: "All Coaches", href: "/coaches" },
-          ]}
-        />
+        {/* COACHES */}
+        <CoachesDropdown />
 
+
+        {/* RESEARCH */}
         <NavDropdown 
           label="Research"
           items={[
@@ -55,6 +45,7 @@ export default function HomePage() {
           ]}
         />
 
+        {/* TOOLS */}
         <NavDropdown 
           label="Tools"
           items={[
@@ -128,7 +119,7 @@ const styles: Record<string, any> = {
   nav: {
     display: "flex",
     justifyContent: "space-between",
-    padding: "12px 50px",
+    padding: "12px 80px",
     borderBottom: "1px solid rgba(0,0,0,0.06)",
     background: "#fffefacc",
     fontSize: "18px",

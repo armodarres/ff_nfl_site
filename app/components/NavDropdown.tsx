@@ -3,9 +3,15 @@
 import Link from "next/link";
 import { useState } from "react";
 
+interface DropdownItem {
+  label: string;
+  href: string;
+  logo?: string;  // <<< HERE
+}
+
 interface DropdownProps {
   label: string;
-  items: { label: string; href: string }[];
+  items: DropdownItem[];
 }
 
 export default function NavDropdown({ label, items }: DropdownProps) {
@@ -17,12 +23,22 @@ export default function NavDropdown({ label, items }: DropdownProps) {
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
     >
-      <span style={styles.label}>{label}</span>
+      <Link href={`/${label.toLowerCase()}`} style={styles.label}>
+  {label}
+</Link>
+
 
       {open && (
         <div style={styles.dropdown}>
           {items.map((item) => (
             <Link key={item.href} href={item.href} style={styles.item}>
+              {item.logo && (
+                <img
+                  src={item.logo}
+                  alt=""
+                  style={styles.logo}
+                />
+              )}
               {item.label}
             </Link>
           ))}
@@ -32,14 +48,11 @@ export default function NavDropdown({ label, items }: DropdownProps) {
   );
 }
 
-//
-// STYLES
-//
-
 const styles: Record<string, any> = {
   container: {
     position: "relative",
-    padding: "12px 18px",
+    padding: "12px 14px",
+    whiteSpace: "nowrap",
   },
 
   label: {
@@ -57,16 +70,27 @@ const styles: Record<string, any> = {
     border: "1px solid rgba(0,0,0,0.08)",
     borderRadius: "6px",
     boxShadow: "0 0 12px rgba(0,0,0,0.08)",
-    padding: "8px 0px",
+    padding: "4px 0px",
     zIndex: 999,
-    minWidth: "160px",
+    minWidth: "140px",
   },
 
   item: {
-    display: "block",
-    padding: "10px 16px",
-    fontSize: "15px",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "3px 10px",
+    fontSize: "13px",
+    lineHeight: 1.1,
     textDecoration: "none",
     color: "#222",
+    whiteSpace: "nowrap",
+  },
+
+  logo: {
+    width: "16px",
+    height: "16px",
+    objectFit: "contain",
+    flexShrink: 0,
   },
 };

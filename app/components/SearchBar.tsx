@@ -1,60 +1,161 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 
-export default function SearchBar() {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<any[]>([]);
-  const [playerIndex, setPlayerIndex] = useState<any[]>([]);
+interface Player {
+  gsis_id: string;
+  name: string;
+  slug: string;
+  position: string;
+  team: string;
+  active: boolean;
+  jersey?: number | null;
+  first_season: number;
+  last_season: number;
+}
 
-  // Load JSON once
+// -------------------------
+// Helpers
+// -------------------------
+
+function normalize(str: string): string {
+  return str.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function tokenize(name: string): string[] {
+  return normalize(name).split(/[\s-]+/).filter(Boolean);
+}
+
+function buildInitials(name: string): string {
+  const tokens = tokenize(name);
+  const chars = tokens.map((t) => t[0]);
+  return chars.join("");
+}
+
+// *** UPDATED HERE ***
+function matchesQuery(playerName: string, query: string): boolean {
+  const q = normalize(query);
+  if (!q) return false;
+
+  const n = normalize(playerName);
+  const tokens = tokenize(playerName);
+  const initials = buildInitials(playerName);
+
+
+  // 2️⃣ token prefix match (keeps ian → NOT brian)
+  for (const t of tokens) {
+    if (t.startsWith(q)) return true;
+  }
+
+  // 3️⃣ initials match (jm → joe mixon)
+  if (initials.startsWith(q)) return true;
+
+  return false;
+}
+
+function filterPlayers(players: Player[], query: string): Player[] {
+  if (!query) return [];
+  return players
+    .filter((p) => Boolean(p.active)) 
+    .filter((p) => matchesQuery(p.name, query));
+}
+
+// -------------------------
+// Component
+// -------------------------
+
+export default function SearchBar() {
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // load player data once
   useEffect(() => {
-    fetch("/data/site_data/player_index.json")
+    fetch("/data/site_data/player_index.json?v=4", { cache: "no-store" })
       .then((res) => res.json())
-      .then((data) => setPlayerIndex(data));
+      .then((data) => setPlayers(data))
+      .catch((err) => console.error("Failed to load players:", err));
   }, []);
 
-  // Filter results
+  const filteredPlayers = useMemo(() => {
+    if (!players || players.length === 0) return [];
+    const results = filterPlayers(players, query);
+    return results.sort((a, b) => a.name.localeCompare(b.name));
+  }, [players, query]);
+
+  // close dropdown on outside click
   useEffect(() => {
-    if (!query) {
-      setResults([]);
-      return;
+    function handleClick(e: MouseEvent) {
+      if (!containerRef.current) return;
+      if (!containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
     }
+    window.addEventListener("mousedown", handleClick);
+    return () => window.removeEventListener("mousedown", handleClick);
+  }, []);
 
-    const q = query.toLowerCase();
-
-    const matches = playerIndex
-      .filter((p) => p.name.toLowerCase().includes(q))
-      .slice(0, 8); // top 8 results
-
-    setResults(matches);
-  }, [query, playerIndex]);
+  // close dropdown on escape key
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
 
   return (
-    <div style={styles.container}>
+    <div
+      ref={containerRef}
+      className="relative w-full max-w-md"
+    >
       <input
         type="text"
-        placeholder="Search players..."
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        style={styles.input}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        placeholder="Search players…"
+        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
 
-      {results.length > 0 && (
-        <div style={styles.dropdown}>
-          {results.map((p) => (
+      {open && filteredPlayers.length > 0 && (
+        <div
+          className="
+            absolute left-0 right-0 mt-1 
+            max-h-80 overflow-y-auto 
+            rounded-md border border-gray-300 bg-white shadow-lg z-50
+          "
+        >
+          {filteredPlayers.map((player) => (
             <Link
-              key={p.slug}
-              href={`/players/${p.slug}`}
-              style={styles.result}
-              onClick={() => setQuery("")}
+              key={player.gsis_id}
+              href={`/players/${player.slug}`}
+              className="
+                flex items-center gap-3 px-3 py-3 
+                hover:bg-gray-100 cursor-pointer
+              "
             >
               <img
-                src={p.team_logo}
-                style={{ width: "22px", height: "22px", marginRight: "8px" }}
+                src={`/headshots/${player.gsis_id}.png`}
+                alt={player.name}
+                className="h-12 w-12 rounded-full object-contain bg-gray-200"
+                loading="lazy"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = "/headshots/missing.png";
+                }}
               />
-              {p.name} <span style={styles.pos}>({p.position})</span>
+
+              <div className="flex flex-col">
+                <span className="text-base font-semibold">{player.name}</span>
+                <span className="text-sm text-gray-500">
+                  {player.position} — {player.team}
+                </span>
+              </div>
             </Link>
           ))}
         </div>
@@ -62,45 +163,3 @@ export default function SearchBar() {
     </div>
   );
 }
-
-//
-// styles
-//
-
-const styles: Record<string, any> = {
-  container: {
-    position: "relative",
-  },
-  input: {
-    width: "260px",
-    padding: "10px 14px",
-    borderRadius: "6px",
-    fontSize: "15px",
-    border: "1px solid rgba(0,0,0,.15)",
-    outline: "none",
-  },
-  dropdown: {
-    position: "absolute",
-    top: "45px",
-    left: 0,
-    width: "260px",
-    background: "#fff",
-    border: "1px solid rgba(0,0,0,0.12)",
-    borderRadius: "6px",
-    boxShadow: "0 3px 10px rgba(0,0,0,0.1)",
-    zIndex: 50,
-  },
-  result: {
-    display: "flex",
-    alignItems: "center",
-    padding: "10px 12px",
-    textDecoration: "none",
-    color: "#111",
-    fontSize: "15px",
-  },
-  pos: {
-    opacity: 0.6,
-    marginLeft: "4px",
-    fontSize: "14px",
-  },
-};
