@@ -79,12 +79,24 @@ const styles: Record<string, any> = {
     display: "flex",
     alignItems: "center",
     gap: "6px",
-    padding: "3px 10px",
+    padding: "1.5px 10px",
     fontSize: "13px",
     lineHeight: 1.1,
     textDecoration: "none",
     color: "#222",
     whiteSpace: "nowrap",
+  },
+
+    historical: {
+    display: "block",
+    padding: "6px 10px",
+    fontSize: "12px",
+    textDecoration: "none",
+    borderTop: "1px solid rgba(0,0,0,0.08)",
+    color: "#444",
+    marginTop: "2px",
+    whiteSpace: "nowrap",
+    cursor: "pointer",
   },
 
   logo: {

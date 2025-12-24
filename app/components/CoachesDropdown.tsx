@@ -161,7 +161,7 @@ const styles: Record<string, any> = {
     display: "flex",
     alignItems: "center",
     gap: "6px",       // tightened
-    padding: "3px 10px", // tightened
+    padding: "1.5px 10px", // tightened
     fontSize: "13px", // tightened
     lineHeight: "1",  // tightened
     color: "#222",
