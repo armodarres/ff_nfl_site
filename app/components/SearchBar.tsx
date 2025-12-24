@@ -20,36 +20,32 @@ interface Player {
 // -------------------------
 
 function normalize(str: string): string {
-  return str.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return str.toLowerCase().trim().replace(/[^a-z0-9 ]/g, "");
 }
 
 function tokenize(name: string): string[] {
-  return normalize(name).split(/[\s-]+/).filter(Boolean);
+  return normalize(name).split(/\s+/).filter(Boolean);
 }
 
 function buildInitials(name: string): string {
   const tokens = tokenize(name);
-  const chars = tokens.map((t) => t[0]);
-  return chars.join("");
+  return tokens.map((t) => t[0]).join("");
 }
 
-// *** UPDATED HERE ***
 function matchesQuery(playerName: string, query: string): boolean {
   const q = normalize(query);
   if (!q) return false;
 
-  const n = normalize(playerName);
   const tokens = tokenize(playerName);
   const initials = buildInitials(playerName);
 
+  // initials match: “ja”, “j a”
+  if (initials.startsWith(q)) return true;
 
-  // 2️⃣ token prefix match (keeps ian → NOT brian)
+  // token prefix match: NEVER inside-token
   for (const t of tokens) {
     if (t.startsWith(q)) return true;
   }
-
-  // 3️⃣ initials match (jm → joe mixon)
-  if (initials.startsWith(q)) return true;
 
   return false;
 }
@@ -57,7 +53,7 @@ function matchesQuery(playerName: string, query: string): boolean {
 function filterPlayers(players: Player[], query: string): Player[] {
   if (!query) return [];
   return players
-    .filter((p) => Boolean(p.active)) 
+    .filter((p) => p.active !== false)
     .filter((p) => matchesQuery(p.name, query));
 }
 
@@ -80,7 +76,7 @@ export default function SearchBar() {
   }, []);
 
   const filteredPlayers = useMemo(() => {
-    if (!players || players.length === 0) return [];
+    if (players.length === 0) return [];
     const results = filterPlayers(players, query);
     return results.sort((a, b) => a.name.localeCompare(b.name));
   }, [players, query]);
@@ -107,10 +103,7 @@ export default function SearchBar() {
   }, []);
 
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full max-w-md"
-    >
+    <div ref={containerRef} className="relative w-full max-w-md">
       <input
         type="text"
         value={query}
@@ -146,7 +139,8 @@ export default function SearchBar() {
                 className="h-12 w-12 rounded-full object-contain bg-gray-200"
                 loading="lazy"
                 onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = "/headshots/missing.png";
+                  (e.currentTarget as HTMLImageElement).src =
+                    "/headshots/missing.png";
                 }}
               />
 
